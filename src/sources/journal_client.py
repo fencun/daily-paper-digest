@@ -21,11 +21,13 @@ def fetch_rss(url: str, journal_name: str) -> List[Paper]:
     past_day = datetime.utcnow() - timedelta(days=7)
 
     for entry in feed.entries[:MAX_PAPERS_PER_SOURCE]:
-        published = entry.get("published_parsed")
-        if published:
-            pub_date = datetime(*published[:6])
+        published_parsed = entry.get("published_parsed")
+        published_str = entry.get("published", "")
+        if published_parsed:
+            pub_date = datetime(*published_parsed[:6])
             if pub_date < past_day:
                 continue
+            published_str = pub_date.strftime("%Y-%m-%d")
 
         title = entry.get("title", "").strip()
         if not title:
@@ -43,7 +45,7 @@ def fetch_rss(url: str, journal_name: str) -> List[Paper]:
             "abstract": summary_text,
             "authors": authors,
             "categories": [journal_name],
-            "published": published,
+            "published": published_str,
             "link": link,
             "source": journal_name,
         })

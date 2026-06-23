@@ -47,7 +47,11 @@ def run():
         print(f"[WARN] Journal search failed: {e}")
 
     all_papers = deduplicate(all_papers)
-    all_papers = sorted(all_papers, key=lambda p: p.get("published", ""), reverse=True)
+    all_papers = sorted(
+        all_papers,
+        key=lambda p: str(p.get("published", "")),
+        reverse=True,
+    )
 
     if len(all_papers) > MAX_TOTAL_PAPERS:
         all_papers = all_papers[:MAX_TOTAL_PAPERS]
