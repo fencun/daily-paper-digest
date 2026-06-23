@@ -12,14 +12,15 @@ ARXIV_API_URL = "http://export.arxiv.org/api/query"
 Paper = Dict
 
 def build_query(keywords: List[str], categories: List[str]) -> str:
-    cat_parts = [f"cat:{c}" for c in categories]
     kw_parts = []
     for kw in keywords:
         if kw in ("GPS Solutions", "Journal of Geodesy"):
             continue
         kw_parts.append(f'abs:"{kw}"')
-    all_terms = kw_parts + cat_parts
-    return " OR ".join(f"({t})" for t in all_terms)
+    cat_parts = [f"cat:{c}" for c in categories]
+    kw_group = " OR ".join(f"({t})" for t in kw_parts)
+    cat_group = " OR ".join(f"({t})" for t in cat_parts)
+    return f"({kw_group}) AND ({cat_group})"
 
 
 def parse_response(xml_text: str) -> List[Paper]:

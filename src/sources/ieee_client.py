@@ -19,7 +19,7 @@ def search() -> List[Paper]:
 
     params = {
         "apikey": IEEE_API_KEY,
-        "querytext": f"({query}) AND puYear:{datetime.utcnow().year}",
+        "querytext": query,
         "max_records": MAX_PAPERS_PER_SOURCE,
         "sort_field": "article_number",
         "sort_order": "desc",
@@ -29,7 +29,12 @@ def search() -> List[Paper]:
         resp = requests.get(IEEE_API_URL, params=params, timeout=30)
         resp.raise_for_status()
         data = resp.json()
-    except Exception:
+        if "articles" not in data or not data["articles"]:
+            print(f"[WARN] IEEE returned no articles. Response keys: {list(data.keys())}")
+            print(f"[WARN] IEEE total_records: {data.get('total_records', 'N/A')}")
+            return []
+    except Exception as e:
+        print(f"[WARN] IEEE search failed: {e}")
         return []
 
     papers = []
