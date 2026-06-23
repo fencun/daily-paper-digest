@@ -11,16 +11,12 @@ ARXIV_API_URL = "http://export.arxiv.org/api/query"
 
 Paper = Dict
 
-def build_query(keywords: List[str], categories: List[str]) -> str:
-    kw_parts = []
-    for kw in keywords:
-        if kw in ("GPS Solutions", "Journal of Geodesy"):
-            continue
-        kw_parts.append(f'abs:"{kw}"')
-    cat_parts = [f"cat:{c}" for c in categories]
-    kw_group = " OR ".join(f"({t})" for t in kw_parts)
-    cat_group = " OR ".join(f"({t})" for t in cat_parts)
-    return f"({kw_group}) AND ({cat_group})"
+KEYWORD_SET = {kw.lower() for kw in KEYWORDS if kw not in ("GPS Solutions", "Journal of Geodesy")}
+
+
+def is_relevant(paper: Paper) -> bool:
+    text = (paper["title"] + " " + paper.get("abstract", "")).lower()
+    return any(kw in text for kw in KEYWORD_SET)
 
 
 def parse_response(xml_text: str) -> List[Paper]:
@@ -58,20 +54,38 @@ def parse_response(xml_text: str) -> List[Paper]:
     return papers
 
 
-def search() -> List[Paper]:
-    past_day = (datetime.utcnow() - timedelta(days=2)).strftime("%Y%m%d0000")
-    query_str = build_query(KEYWORDS, ARXIV_CATEGORIES)
+def search_category(category: str) -> List[Paper]:
+    query = f"cat:{category}"
     params = {
-        "search_query": query_str,
+        "search_query": query,
         "start": 0,
         "max_results": MAX_PAPERS_PER_SOURCE,
         "sortBy": "submittedDate",
         "sortOrder": "descending",
     }
     url = f"{ARXIV_API_URL}?{urllib.parse.urlencode(params)}"
-    resp = requests.get(url, timeout=30)
+    resp = requests.get(url, timeout=60)
     resp.raise_for_status()
-    papers = parse_response(resp.text)
-    for p in papers:
-        p["source"] = "arXiv"
-    return papers
+    return parse_response(resp.text)
+
+
+def search() -> List[Paper]:
+    all_papers = []
+    for cat in ARXIV_CATEGORIES:
+        try:
+            papers = search_category(cat)
+            all_papers.extend(papers)
+        except Exception:
+            continue
+
+    relevant = [p for p in all_papers if is_relevant(p)]
+
+    seen = set()
+    deduped = []
+    for p in relevant:
+        key = p["id"]
+        if key not in seen:
+            seen.add(key)
+            deduped.append(p)
+
+    return deduped[:MAX_PAPERS_PER_SOURCE]

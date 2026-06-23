@@ -42,7 +42,11 @@ def summarize(papers: List[Paper]) -> str:
         else:
             return _fallback_summary(papers)
     except Exception as e:
-        print(f"[WARN] LLM summarization failed: {e}, using fallback")
+        error_msg = str(e)
+        if "quota" in error_msg.lower() or "429" in error_msg:
+            print(f"[WARN] LLM API quota exceeded. Visit https://aistudio.google.com/apikey to check usage.")
+        else:
+            print(f"[WARN] LLM summarization failed: {e}")
         return _fallback_summary(papers)
 
 
